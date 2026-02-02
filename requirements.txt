@@ -1,0 +1,61 @@
+# ===================================
+# CORE FRAMEWORK
+# ===================================
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.12
+python-dotenv==1.0.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# ===================================
+# HTTP CLIENT (Conectar con Spring/Jakarta)
+# ===================================
+httpx==0.27.0
+requests==2.32.3
+
+# ===================================
+# BASE DE DATOS MYSQL
+# ===================================
+sqlalchemy==2.0.36
+pymysql==1.1.1
+# mysqlclient==2.2.6  # Opcional, más rápido pero requiere compilación
+
+# ===================================
+# NOTIFICACIONES - EMAIL
+# ===================================
+aiosmtplib==3.0.2
+jinja2==3.1.4
+
+# ===================================
+# NOTIFICACIONES - WHATSAPP
+# ===================================
+twilio==9.3.7
+
+# ===================================
+# REPORTES - PDFs
+# ===================================
+reportlab==4.2.5
+# fpdf2==2.8.1  # Alternativa más simple
+
+# ===================================
+# REPORTES - EXCEL
+# ===================================
+openpyxl==3.1.5
+# xlsxwriter==3.2.0  # Alternativa
+
+# ===================================
+# PROCESAMIENTO DE DATOS
+# ===================================
+pandas==2.2.3
+
+# ===================================
+# TAREAS PROGRAMADAS (Recordatorios)
+# ===================================
+apscheduler==3.10.4
+
+# ===================================
+# OPCIONAL - REDIS (Si quieres usar Celery)
+# ===================================
+# celery==5.4.0
+# redis==5.2.0
