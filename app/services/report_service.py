@@ -126,7 +126,8 @@ class ReportService:
         """Obtener estadísticas generales de la plataforma"""
         try:
             # Consultar usuarios desde Spring Boot
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                print(f"🔍 Consultando estadísticas generales...")
                 usuarios_resp = await client.get(f"{self.spring_url}/usuarios")
                 usuarios = usuarios_resp.json() if usuarios_resp.status_code == 200 else []
                 
@@ -157,7 +158,7 @@ class ReportService:
     async def _obtener_asesorias_jakarta(self, filtros: FiltrosReporteAsesorias) -> List[Dict]:
         """Consultar asesorías desde Jakarta EE"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 # Endpoint base
                 url = f"{self.jakarta_url}/asesorias"
                 
@@ -167,6 +168,7 @@ class ReportService:
                 elif filtros.estado:
                     url = f"{self.jakarta_url}/asesorias/estado/{filtros.estado.value}"
                 
+                print(f"🔍 Consultando asesorías: {url}")
                 response = await client.get(url)
                 
                 if response.status_code == 200:
@@ -192,7 +194,7 @@ class ReportService:
     async def _obtener_proyectos_spring(self, filtros: FiltrosReporteProyectos) -> List[Dict]:
         """Consultar proyectos desde Spring Boot"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 # Endpoint base
                 url = f"{self.spring_url}/proyectos"
                 
@@ -202,6 +204,7 @@ class ReportService:
                 elif filtros.tipo:
                     url = f"{self.spring_url}/proyectos/tipo/{filtros.tipo}"
                 
+                print(f"🔍 Consultando proyectos: {url}")
                 response = await client.get(url)
                 
                 if response.status_code == 200:
