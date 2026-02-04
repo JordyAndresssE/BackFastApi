@@ -165,6 +165,8 @@ async def notificar_asesoria(notificacion: NotificacionAsesoria, background_task
         
         print(f"\n✅ NOTIFICACIONES COMPLETADAS\n{'='*70}\n")
         
+        return RespuestaExito(
+            mensaje=f"Notificaciones de asesoría enviadas ({notificacion.estado.value})",
             datos={"id_asesoria": notificacion.id_asesoria}
         )
         
