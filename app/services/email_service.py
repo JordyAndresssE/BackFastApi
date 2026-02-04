@@ -20,6 +20,17 @@ class EmailService:
         self.password = settings.smtp_password
         self.from_email = settings.email_from
         self.from_name = settings.email_from_name
+        
+        # Log de configuración al inicializar
+        print("\n" + "="*60)
+        print("📧 Email Service configurado:")
+        print(f"   Servidor: {self.smtp_server}:{self.smtp_port}")
+        print(f"   Usuario: {self.username}")
+        print(f"   From: {self.from_email}")
+        print(f"   From Name: {self.from_name}")
+        print(f"   Usuario configurado: {'✅' if self.username else '❌'}")
+        print(f"   Password configurado: {'✅' if self.password else '❌'}")
+        print("="*60 + "\n")
     
     def enviar_email(
         self,
@@ -39,7 +50,21 @@ class EmailService:
             tipo: Tipo de notificación (nueva_asesoria, aprobada, rechazada, recordatorio)
             datos: Datos adicionales para el template
         """
+        print(f"\n📧 Iniciando envío de email...")
+        print(f"   → Destinatario: {destinatario}")
+        print(f"   → Asunto: {asunto}")
+        print(f"   → Tipo: {tipo}")
+        
+        # Validar credenciales
+        if not self.username or not self.password:
+            print("❌ ERROR: SMTP_USERNAME o SMTP_PASSWORD no configurados")
+            print("   → Agrega estas variables en Railway:")
+            print(f"      SMTP_USERNAME={self.from_email}")
+            print("      SMTP_PASSWORD=tu_password")
+            return False
+        
         try:
+            print(f"📝 Generando HTML del email...")
             # Crear mensaje
             msg = MIMEMultipart("alternative")
             msg["Subject"] = asunto
@@ -52,18 +77,50 @@ class EmailService:
             # Adjuntar HTML
             part_html = MIMEText(html_content, "html")
             msg.attach(part_html)
+            print(f"✅ HTML generado correctamente")
             
             # Enviar email
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            print(f"🔌 Conectando a {self.smtp_server}:{self.smtp_port}...")
+            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30) as server:
+                print(f"🔐 Iniciando TLS...")
                 server.starttls()
+                
+                print(f"👤 Autenticando con usuario: {self.username}...")
                 server.login(self.username, self.password)
+                print(f"✅ Autenticación exitosa")
+                
+                print(f"📤 Enviando mensaje...")
                 server.send_message(msg)
             
-            print(f"✅ Email enviado a {destinatario}")
+            print(f"✅ Email enviado exitosamente a {destinatario}\n")
             return True
             
+        except smtplib.SMTPAuthenticationError as e:
+            print(f"❌ ERROR DE AUTENTICACIÓN SMTP:")
+            print(f"   → Código: {e.smtp_code}")
+            print(f"   → Mensaje: {e.smtp_error.decode() if hasattr(e, 'smtp_error') else str(e)}")
+            print(f"   → Verifica la contraseña en Railway")
+            print(f"   → Usuario: {self.username}")
+            return False
+            
+        except smtplib.SMTPConnectError as e:
+            print(f"❌ ERROR DE CONEXIÓN SMTP:")
+            print(f"   → No se pudo conectar a {self.smtp_server}:{self.smtp_port}")
+            print(f"   → Mensaje: {str(e)}")
+            print(f"   → Verifica que el servidor SMTP sea correcto")
+            return False
+            
+        except smtplib.SMTPException as e:
+            print(f"❌ ERROR SMTP:")
+            print(f"   → {str(e)}")
+            return False
+            
         except Exception as e:
-            print(f"❌ Error al enviar email: {str(e)}")
+            print(f"❌ ERROR INESPERADO al enviar email:")
+            print(f"   → Tipo: {type(e).__name__}")
+            print(f"   → Mensaje: {str(e)}")
+            import traceback
+            print(f"   → Traceback:\n{traceback.format_exc()}")
             return False
     
     def _generar_html(self, tipo: str, mensaje: str, datos: Dict) -> str:
