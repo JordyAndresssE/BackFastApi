@@ -11,12 +11,18 @@ class Settings(BaseSettings):
     spring_boot_url: str = "http://localhost:8081/api"
     jakarta_ee_url: str = "http://localhost:8080/backproyecto/api"
     database_url: str = "mysql+pymysql://root:password@localhost:3306/portafolio_programadores"
+    
+    # Email - Resend API
+    resend_api_key: str = ""
+    email_from: str = "noreply@portafolio.com"
+    email_from_name: str = "Portafolio Devs"
+    
+    # Legacy SMTP (deprecated, usar Resend)
     smtp_server: str = "smtp.gmail.com"
     smtp_port: int = 587
     smtp_username: str = ""
     smtp_password: str = ""
-    email_from: str = "noreply@portafolio.com"
-    email_from_name: str = "Portafolio Devs"
+    
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_whatsapp_from: str = "whatsapp:+14155238886"

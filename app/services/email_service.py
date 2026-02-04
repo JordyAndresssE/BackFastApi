@@ -1,35 +1,33 @@
 """
 Servicio de Email
-Envío de correos con templates HTML
+Envío de correos con templates HTML usando Resend
 """
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 from jinja2 import Template
 from ..config import settings
 from typing import Optional, Dict
 
 
 class EmailService:
-    """Servicio para enviar emails"""
+    """Servicio para enviar emails usando Resend API"""
     
     def __init__(self):
-        self.smtp_server = settings.smtp_server
-        self.smtp_port = settings.smtp_port
-        self.username = settings.smtp_username
-        self.password = settings.smtp_password
         self.from_email = settings.email_from
         self.from_name = settings.email_from_name
         
+        # Configurar Resend API
+        if settings.resend_api_key:
+            resend.api_key = settings.resend_api_key
+            self.resend_enabled = True
+        else:
+            self.resend_enabled = False
+        
         # Log de configuración al inicializar
         print("\n" + "="*60)
-        print("📧 Email Service configurado:")
-        print(f"   Servidor: {self.smtp_server}:{self.smtp_port}")
-        print(f"   Usuario: {self.username}")
+        print("📧 Email Service configurado (Resend):")
         print(f"   From: {self.from_email}")
         print(f"   From Name: {self.from_name}")
-        print(f"   Usuario configurado: {'✅' if self.username else '❌'}")
-        print(f"   Password configurado: {'✅' if self.password else '❌'}")
+        print(f"   Resend API configurada: {'✅' if self.resend_enabled else '❌'}")
         print("="*60 + "\n")
     
     def enviar_email(
@@ -41,7 +39,7 @@ class EmailService:
         datos: Optional[Dict] = None
     ) -> bool:
         """
-        Enviar email con template HTML
+        Enviar email con template HTML usando Resend
         
         Args:
             destinatario: Email del destinatario
@@ -55,68 +53,36 @@ class EmailService:
         print(f"   → Asunto: {asunto}")
         print(f"   → Tipo: {tipo}")
         
-        # Validar credenciales
-        if not self.username or not self.password:
-            print("❌ ERROR: SMTP_USERNAME o SMTP_PASSWORD no configurados")
-            print("   → Agrega estas variables en Railway:")
-            print(f"      SMTP_USERNAME={self.from_email}")
-            print("      SMTP_PASSWORD=tu_password")
+        # Validar configuración
+        if not self.resend_enabled:
+            print("❌ ERROR: RESEND_API_KEY no configurada")
+            print("   → Agrega esta variable en Railway:")
+            print(f"      RESEND_API_KEY=re_xxxxxxxxxx")
             return False
         
         try:
             print(f"📝 Generando HTML del email...")
-            # Crear mensaje
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = asunto
-            msg["From"] = f"{self.from_name} <{self.from_email}>"
-            msg["To"] = destinatario
-            
             # Generar HTML según tipo
             html_content = self._generar_html(tipo, mensaje, datos or {})
-            
-            # Adjuntar HTML
-            part_html = MIMEText(html_content, "html")
-            msg.attach(part_html)
             print(f"✅ HTML generado correctamente")
             
-            # Enviar email
-            print(f"🔌 Conectando a {self.smtp_server}:{self.smtp_port}...")
-            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30) as server:
-                print(f"🔐 Iniciando TLS...")
-                server.starttls()
-                
-                print(f"👤 Autenticando con usuario: {self.username}...")
-                server.login(self.username, self.password)
-                print(f"✅ Autenticación exitosa")
-                
-                print(f"📤 Enviando mensaje...")
-                server.send_message(msg)
+            # Enviar email con Resend
+            print(f"📤 Enviando email via Resend API...")
+            params = {
+                "from": f"{self.from_name} <{self.from_email}>",
+                "to": [destinatario],
+                "subject": asunto,
+                "html": html_content,
+            }
             
-            print(f"✅ Email enviado exitosamente a {destinatario}\n")
+            response = resend.Emails.send(params)
+            
+            print(f"✅ Email enviado exitosamente a {destinatario}")
+            print(f"   → Resend ID: {response.get('id', 'N/A')}")
             return True
             
-        except smtplib.SMTPAuthenticationError as e:
-            print(f"❌ ERROR DE AUTENTICACIÓN SMTP:")
-            print(f"   → Código: {e.smtp_code}")
-            print(f"   → Mensaje: {e.smtp_error.decode() if hasattr(e, 'smtp_error') else str(e)}")
-            print(f"   → Verifica la contraseña en Railway")
-            print(f"   → Usuario: {self.username}")
-            return False
-            
-        except smtplib.SMTPConnectError as e:
-            print(f"❌ ERROR DE CONEXIÓN SMTP:")
-            print(f"   → No se pudo conectar a {self.smtp_server}:{self.smtp_port}")
-            print(f"   → Mensaje: {str(e)}")
-            print(f"   → Verifica que el servidor SMTP sea correcto")
-            return False
-            
-        except smtplib.SMTPException as e:
-            print(f"❌ ERROR SMTP:")
-            print(f"   → {str(e)}")
-            return False
-            
         except Exception as e:
-            print(f"❌ ERROR INESPERADO al enviar email:")
+            print(f"❌ ERROR al enviar email con Resend:")
             print(f"   → Tipo: {type(e).__name__}")
             print(f"   → Mensaje: {str(e)}")
             import traceback
