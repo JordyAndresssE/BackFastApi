@@ -22,12 +22,25 @@ class EmailService:
         else:
             self.resend_enabled = False
         
+        # IMPORTANTE: Resend requiere que el dominio esté verificado
+        # Si usas un email personalizado (asesorias@pixelgosoft.com), 
+        # debes verificar el dominio en Resend Dashboard
+        # Mientras tanto, puedes usar: onboarding@resend.dev
+        
         # Log de configuración al inicializar
         print("\n" + "="*60)
         print("📧 Email Service configurado (Resend):")
         print(f"   From: {self.from_email}")
         print(f"   From Name: {self.from_name}")
         print(f"   Resend API configurada: {'✅' if self.resend_enabled else '❌'}")
+        
+        if self.resend_enabled and '@' in self.from_email:
+            domain = self.from_email.split('@')[1]
+            if domain not in ['resend.dev', 'gmail.com', 'outlook.com']:
+                print(f"   ⚠️  Dominio personalizado detectado: {domain}")
+                print(f"   ⚠️  Asegúrate de verificarlo en Resend Dashboard")
+                print(f"   💡 O usa temporalmente: onboarding@resend.dev")
+        
         print("="*60 + "\n")
     
     def enviar_email(
@@ -85,8 +98,26 @@ class EmailService:
             print(f"❌ ERROR al enviar email con Resend:")
             print(f"   → Tipo: {type(e).__name__}")
             print(f"   → Mensaje: {str(e)}")
+            
+            # Mostrar detalles adicionales si es ResendError
+            if hasattr(e, 'message'):
+                print(f"   → Error Message: {e.message}")
+            if hasattr(e, 'status_code'):
+                print(f"   → Status Code: {e.status_code}")
+            
             import traceback
             print(f"   → Traceback:\n{traceback.format_exc()}")
+            
+            # Sugerencias según el error
+            if "Invalid API key" in str(e) or "Unauthorized" in str(e):
+                print("\n💡 SOLUCIÓN:")
+                print("   → Verifica que RESEND_API_KEY esté correcta en Railway")
+            elif "not verified" in str(e) or "domain" in str(e).lower():
+                print("\n💡 SOLUCIÓN:")
+                print("   → El email 'from' debe estar verificado en Resend")
+                print("   → Usa 'onboarding@resend.dev' temporalmente")
+                print("   → O verifica tu dominio en Resend Dashboard")
+            
             return False
     
     def _generar_html(self, tipo: str, mensaje: str, datos: Dict) -> str:

@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     
     # Email - Resend API
     resend_api_key: str = ""
-    email_from: str = "noreply@portafolio.com"
+    # IMPORTANTE: Si usas un dominio personalizado, debes verificarlo en Resend
+    # Temporalmente puedes usar: onboarding@resend.dev
+    email_from: str = "onboarding@resend.dev"
     email_from_name: str = "Portafolio Devs"
     
     # Legacy SMTP (deprecated, usar Resend)
