@@ -132,12 +132,19 @@ async def notificar_asesoria(notificacion: NotificacionAsesoria, background_task
             )
             
             # WhatsApp al PROGRAMADOR (recordatorio)
+            print(f"\n🔍 Verificando teléfono del programador...")
+            print(f"   → Teléfono recibido: {notificacion.telefono_programador or 'NO ENVIADO'}")
+            
             if notificacion.telefono_programador:
+                print(f"✅ Teléfono válido, enviando WhatsApp...")
                 mensaje_wa = f"✅ Asesoría aprobada!\n📅 {notificacion.fecha_asesoria} a las {notificacion.hora_asesoria}\n👤 Con: {notificacion.nombre_usuario}"
                 whatsapp_service.enviar_mensaje(
                     numero=notificacion.telefono_programador,
                     mensaje=mensaje_wa
                 )
+            else:
+                print(f"⚠️ WhatsApp NO enviado: telefono_programador no fue incluido en el request")
+                print(f"💡 El frontend debe enviar: 'telefono_programador': '+593999999999'")
         
         elif notificacion.estado.value == "rechazada":
             print("📨 ENVIANDO → Email al USUARIO (rechazada)")
