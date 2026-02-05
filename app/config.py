@@ -12,12 +12,9 @@ class Settings(BaseSettings):
     jakarta_ee_url: str = "http://localhost:8080/backproyecto/api"
     database_url: str = "mysql+pymysql://root:password@localhost:3306/portafolio_programadores"
     
-    # Email - SMTP (Gmail u otro proveedor)
-    smtp_server: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_username: str = ""  # tu_email@gmail.com
-    smtp_password: str = ""  # Contraseña de aplicación (NO tu contraseña normal)
-    email_from: str = ""     # Mismo email que smtp_username
+    # Email - Brevo API (300 emails/día GRATIS)
+    brevo_api_key: str = ""  # xkeysib-xxxxx
+    email_from: str = "jordystream270@gmail.com"  # Tu email verificado en Brevo
     email_from_name: str = "Portafolio Devs"
     
     # WhatsApp - Twilio

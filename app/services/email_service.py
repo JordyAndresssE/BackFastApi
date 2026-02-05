@@ -1,49 +1,36 @@
 """
 Servicio de Email
-Envío de correos con templates HTML usando SMTP (Gmail)
-100% GRATIS - Sin límites
+Envío de correos con templates HTML usando Brevo API (HTTP)
+100% GRATIS - 300 emails/día - Funciona en Railway
 """
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import httpx
 from ..config import settings
 from typing import Optional, Dict
 
 
 class EmailService:
-    """Servicio para enviar emails usando SMTP (Gmail)"""
+    """Servicio para enviar emails usando Brevo API"""
+    
+    BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
     
     def __init__(self):
-        # Configuración SMTP
-        self.smtp_server = settings.smtp_server
-        self.smtp_port = settings.smtp_port
-        self.smtp_username = settings.smtp_username
-        self.smtp_password = settings.smtp_password
+        self.api_key = settings.brevo_api_key
         self.from_email = settings.email_from
         self.from_name = settings.email_from_name
         
         # Verificar configuración
-        self.smtp_enabled = bool(
-            self.smtp_server and 
-            self.smtp_username and 
-            self.smtp_password
-        )
+        self.brevo_enabled = bool(self.api_key)
         
         # Log de configuración
         print("\n" + "="*60)
-        print("📧 Email Service configurado (SMTP Gmail):")
-        print(f"   Server: {self.smtp_server}:{self.smtp_port}")
-        print(f"   Username: {self.smtp_username}")
-        print(f"   From: {self.from_email}")
-        print(f"   SMTP habilitado: {'✅' if self.smtp_enabled else '❌'}")
+        print("📧 Email Service configurado (Brevo API):")
+        print(f"   From: {self.from_name} <{self.from_email}>")
+        print(f"   API Key: {'✅ ' + self.api_key[:20] + '...' if self.api_key else '❌ NO CONFIGURADA'}")
+        print(f"   Brevo habilitado: {'✅' if self.brevo_enabled else '❌'}")
         
-        if not self.smtp_enabled:
-            print("\n   ⚠️ SMTP no configurado correctamente.")
-            print("   → Configura estas variables en .env:")
-            print("      SMTP_SERVER=smtp.gmail.com")
-            print("      SMTP_PORT=587")
-            print("      SMTP_USERNAME=tu_email@gmail.com")
-            print("      SMTP_PASSWORD=tu_contraseña_de_aplicacion")
+        if not self.brevo_enabled:
+            print("\n   ⚠️ Brevo no configurado.")
+            print("   → Configura BREVO_API_KEY en .env")
         
         print("="*60 + "\n")
     
@@ -56,7 +43,7 @@ class EmailService:
         datos: Optional[Dict] = None
     ) -> bool:
         """
-        Enviar email con template HTML usando SMTP
+        Enviar email con template HTML usando Brevo API
         
         Args:
             destinatario: Email del destinatario
@@ -71,9 +58,9 @@ class EmailService:
         print(f"   → Tipo: {tipo}")
         
         # Validar configuración
-        if not self.smtp_enabled:
-            print("❌ ERROR: SMTP no está configurado")
-            print("   → Configura SMTP_USERNAME y SMTP_PASSWORD en .env")
+        if not self.brevo_enabled:
+            print("❌ ERROR: Brevo API no está configurada")
+            print("   → Configura BREVO_API_KEY en .env o Railway")
             return False
         
         try:
@@ -81,41 +68,56 @@ class EmailService:
             print(f"📝 Generando HTML del email...")
             html_content = self._generar_html(tipo, mensaje, datos or {})
             
-            # Crear mensaje
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = asunto
-            msg["From"] = f"{self.from_name} <{self.from_email}>"
-            msg["To"] = destinatario
+            # Preparar payload para Brevo
+            payload = {
+                "sender": {
+                    "name": self.from_name,
+                    "email": self.from_email
+                },
+                "to": [
+                    {"email": destinatario}
+                ],
+                "subject": asunto,
+                "htmlContent": html_content
+            }
             
-            # Agregar contenido HTML
-            html_part = MIMEText(html_content, "html", "utf-8")
-            msg.attach(html_part)
+            # Headers con API Key
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "api-key": self.api_key
+            }
             
-            # Enviar via SMTP
-            print(f"📤 Conectando a {self.smtp_server}:{self.smtp_port}...")
+            # Enviar via HTTP
+            print(f"📤 Enviando email via Brevo API...")
             
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls()  # Seguridad TLS
-                print(f"🔐 Autenticando...")
-                server.login(self.smtp_username, self.smtp_password)
-                print(f"📨 Enviando email...")
-                server.sendmail(self.from_email, destinatario, msg.as_string())
+            with httpx.Client(timeout=30.0) as client:
+                response = client.post(
+                    self.BREVO_API_URL,
+                    json=payload,
+                    headers=headers
+                )
             
-            print(f"✅ Email enviado exitosamente a {destinatario}")
-            return True
-            
-        except smtplib.SMTPAuthenticationError as e:
-            print(f"❌ ERROR de autenticación SMTP:")
-            print(f"   → {str(e)}")
-            print("\n💡 SOLUCIÓN:")
-            print("   1. Activa 'Verificación en 2 pasos' en tu cuenta Google")
-            print("   2. Genera una 'Contraseña de aplicación':")
-            print("      → https://myaccount.google.com/apppasswords")
-            print("   3. Usa esa contraseña en SMTP_PASSWORD")
-            return False
-            
-        except smtplib.SMTPException as e:
-            print(f"❌ ERROR SMTP: {str(e)}")
+            if response.status_code in [200, 201]:
+                result = response.json()
+                print(f"✅ Email enviado exitosamente a {destinatario}")
+                print(f"   → Message ID: {result.get('messageId', 'N/A')}")
+                return True
+            else:
+                print(f"❌ ERROR al enviar email:")
+                print(f"   → Status Code: {response.status_code}")
+                print(f"   → Response: {response.text}")
+                
+                # Sugerencias según el error
+                if response.status_code == 401:
+                    print("\n💡 SOLUCIÓN: Verifica que BREVO_API_KEY sea correcta")
+                elif response.status_code == 400:
+                    print("\n💡 SOLUCIÓN: Verifica el formato del email")
+                
+                return False
+                
+        except httpx.TimeoutException:
+            print("❌ ERROR: Timeout al conectar con Brevo API")
             return False
             
         except Exception as e:
@@ -198,9 +200,6 @@ class EmailService:
                     color: #666666;
                     font-size: 12px;
                     border-top: 1px solid #eee;
-                }}
-                .emoji {{
-                    font-size: 20px;
                 }}
             </style>
         </head>
