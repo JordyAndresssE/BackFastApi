@@ -1,6 +1,9 @@
 """
-Servicio de Recordatorios Programados
-Usa APScheduler para enviar recordatorios antes de asesorías
+Capa de Negocio - Servicio de Recordatorios
+Proyecto: Sistema de Portafolio de Programadores
+Este servicio programa recordatorios automaticos usando APScheduler
+Autor: Estudiante
+Fecha: 2026
 """
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
@@ -10,13 +13,17 @@ from .email_service import EmailService
 
 
 class SchedulerService:
-    """Servicio para programar recordatorios automáticos"""
+    """
+    Servicio para programar recordatorios automaticos.
+    Utiliza APScheduler para programar tareas en segundo plano.
+    """
     
     def __init__(self):
+        """Constructor del servicio de recordatorios"""
         self.scheduler = BackgroundScheduler()
         self.scheduler.start()
         self.email_service = EmailService()
-        print("✅ Scheduler iniciado")
+        print("Scheduler iniciado")
     
     def programar_recordatorio(
         self,
@@ -27,52 +34,52 @@ class SchedulerService:
         minutos_antes: int = 30
     ) -> str:
         """
-        Programar recordatorio automático
+        Metodo para programar un recordatorio automatico.
         
-        Args:
-            id_asesoria: ID de la asesoría
-            fecha_hora: Fecha y hora de la asesoría
+        Parametros:
+            id_asesoria: ID de la asesoria
+            fecha_hora: Fecha y hora de la asesoria
             email_programador: Email del programador
             email_usuario: Email del usuario
             minutos_antes: Minutos antes de enviar el recordatorio
             
-        Returns:
-            ID del job programado
+        Retorna:
+            str: ID del job programado
         """
-        # Calcular cuándo enviar el recordatorio
+        # Calcular cuando enviar el recordatorio
         momento_envio = fecha_hora - timedelta(minutes=minutos_antes)
         
         # Verificar que no sea en el pasado
         if momento_envio <= datetime.now():
-            print("⚠️ El momento de envío está en el pasado, enviando ahora")
+            print("Aviso: El momento de envio esta en el pasado, enviando ahora")
             momento_envio = datetime.now() + timedelta(seconds=10)
         
-        # Crear job ID único
+        # Crear job ID unico
         job_id = f"recordatorio_{id_asesoria}_{datetime.now().timestamp()}"
         
-        # Programar envío al programador
+        # Programar envio al programador
         self.scheduler.add_job(
             func=self._enviar_recordatorio,
             trigger=DateTrigger(run_date=momento_envio),
             args=[email_programador, id_asesoria, fecha_hora],
             id=f"{job_id}_programador",
-            name=f"Recordatorio asesoría {id_asesoria} - Programador"
+            name=f"Recordatorio asesoria {id_asesoria} - Programador"
         )
         
-        # Programar envío al usuario
+        # Programar envio al usuario
         self.scheduler.add_job(
             func=self._enviar_recordatorio,
             trigger=DateTrigger(run_date=momento_envio),
             args=[email_usuario, id_asesoria, fecha_hora],
             id=f"{job_id}_usuario",
-            name=f"Recordatorio asesoría {id_asesoria} - Usuario"
+            name=f"Recordatorio asesoria {id_asesoria} - Usuario"
         )
         
-        print(f"✅ Recordatorio programado: {id_asesoria} para {momento_envio}")
+        print(f"Recordatorio programado: {id_asesoria} para {momento_envio}")
         return job_id
     
     def _enviar_recordatorio(self, email: str, id_asesoria: str, fecha_hora: datetime):
-        """Enviar email de recordatorio"""
+        """Metodo privado para enviar el email de recordatorio"""
         try:
             datos = {
                 "fecha": fecha_hora.strftime("%Y-%m-%d"),
@@ -82,16 +89,16 @@ class SchedulerService:
             
             self.email_service.enviar_email(
                 destinatario=email,
-                asunto="⏰ Recordatorio: Asesoría próxima",
-                mensaje=f"Tu asesoría es hoy a las {datos['hora']}",
+                asunto="Recordatorio: Asesoria proxima",
+                mensaje=f"Tu asesoria es hoy a las {datos['hora']}",
                 tipo="recordatorio",
                 datos=datos
             )
             
-            print(f"✅ Recordatorio enviado a {email}")
+            print(f"Recordatorio enviado a {email}")
             
         except Exception as e:
-            print(f"❌ Error al enviar recordatorio: {str(e)}")
+            print(f"Error al enviar recordatorio: {str(e)}")
     
     def obtener_jobs_pendientes(self) -> List[Dict]:
         """Obtener lista de recordatorios programados"""
@@ -109,13 +116,13 @@ class SchedulerService:
         """Cancelar un recordatorio programado"""
         try:
             self.scheduler.remove_job(job_id)
-            print(f"✅ Recordatorio cancelado: {job_id}")
+            print(f"Recordatorio cancelado: {job_id}")
             return True
         except Exception as e:
-            print(f"❌ Error al cancelar recordatorio: {str(e)}")
+            print(f"Error al cancelar recordatorio: {str(e)}")
             return False
     
     def shutdown(self):
         """Detener el scheduler"""
         self.scheduler.shutdown()
-        print("🛑 Scheduler detenido")
+        print("Scheduler detenido")

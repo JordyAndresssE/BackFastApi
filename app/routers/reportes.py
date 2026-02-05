@@ -1,6 +1,9 @@
 """
-Router de Reportes
-Endpoints para generar dashboards, PDFs y Excel
+Capa de Presentacion - Router de Reportes
+Proyecto: Sistema de Portafolio de Programadores
+Este router maneja los endpoints para generacion de dashboards, PDFs y Excel
+Autor: Estudiante
+Fecha: 2026
 """
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
@@ -17,7 +20,7 @@ import os
 
 router = APIRouter()
 
-# Instanciar servicios
+# Instanciar servicios de la capa de negocio
 report_service = ReportService()
 pdf_generator = PDFGenerator()
 excel_generator = ExcelGenerator()
@@ -31,7 +34,7 @@ async def obtener_dashboard_asesorias(
     estado: Optional[str] = None
 ):
     """
-    Dashboard de asesorías con estadísticas y gráficos
+    Endpoint para obtener dashboard de asesorias con estadisticas.
     """
     try:
         filtros = FiltrosReporteAsesorias(
@@ -54,7 +57,7 @@ async def obtener_dashboard_proyectos(
     tipo: Optional[str] = None
 ):
     """
-    Dashboard de proyectos con estadísticas
+    Endpoint para obtener dashboard de proyectos con estadisticas.
     """
     try:
         filtros = FiltrosReporteProyectos(
@@ -77,7 +80,7 @@ async def generar_pdf_asesorias(
     estado: Optional[str] = None
 ):
     """
-    Generar reporte PDF de asesorías
+    Endpoint para generar reporte PDF de asesorias.
     """
     try:
         # Obtener datos
@@ -111,7 +114,7 @@ async def generar_excel_proyectos(
     tipo: Optional[str] = None
 ):
     """
-    Generar reporte Excel de proyectos
+    Endpoint para generar reporte Excel de proyectos.
     """
     try:
         # Obtener datos
@@ -140,11 +143,11 @@ async def generar_excel_proyectos(
 @router.get("/estadisticas")
 async def obtener_estadisticas_generales():
     """
-    Estadísticas generales de la plataforma
+    Endpoint para obtener estadisticas generales de la plataforma.
     """
     try:
         stats = await report_service.obtener_estadisticas_generales()
         return stats
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener estadísticas: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener estadisticas: {str(e)}")

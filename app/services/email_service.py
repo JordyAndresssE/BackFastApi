@@ -1,7 +1,9 @@
 """
-Servicio de Email
-Envío de correos con templates HTML usando Brevo API (HTTP)
-100% GRATIS - 300 emails/día - Funciona en Railway
+Capa de Negocio - Servicio de Correo Electronico
+Proyecto: Sistema de Portafolio de Programadores
+Este servicio se encarga del envio de correos usando la API de Brevo
+Autor: Estudiante
+Fecha: 2026
 """
 import httpx
 from ..config import settings
@@ -9,28 +11,32 @@ from typing import Optional, Dict
 
 
 class EmailService:
-    """Servicio para enviar emails usando Brevo API"""
+    """
+    Servicio para enviar correos electronicos.
+    Utiliza la API de Brevo para el envio de emails con plantillas HTML.
+    """
     
     BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
     
     def __init__(self):
+        """Constructor del servicio de email"""
         self.api_key = settings.brevo_api_key
         self.from_email = settings.email_from
         self.from_name = settings.email_from_name
         
-        # Verificar configuración
+        # Verificar si la API esta configurada
         self.brevo_enabled = bool(self.api_key)
         
-        # Log de configuración
+        # Mostrar estado de configuracion
         print("\n" + "="*60)
-        print("📧 Email Service configurado (Brevo API):")
+        print("Email Service configurado (Brevo API):")
         print(f"   From: {self.from_name} <{self.from_email}>")
-        print(f"   API Key: {'✅ ' + self.api_key[:20] + '...' if self.api_key else '❌ NO CONFIGURADA'}")
-        print(f"   Brevo habilitado: {'✅' if self.brevo_enabled else '❌'}")
+        print(f"   API Key: {'Configurada' if self.api_key else 'NO CONFIGURADA'}")
+        print(f"   Estado: {'ACTIVO' if self.brevo_enabled else 'INACTIVO'}")
         
         if not self.brevo_enabled:
-            print("\n   ⚠️ Brevo no configurado.")
-            print("   → Configura BREVO_API_KEY en .env")
+            print("\n   Aviso: Brevo no configurado.")
+            print("   Configura BREVO_API_KEY en el archivo .env")
         
         print("="*60 + "\n")
     
@@ -43,32 +49,35 @@ class EmailService:
         datos: Optional[Dict] = None
     ) -> bool:
         """
-        Enviar email con template HTML usando Brevo API
+        Metodo para enviar un correo electronico.
         
-        Args:
+        Parametros:
             destinatario: Email del destinatario
-            asunto: Asunto del email
-            mensaje: Mensaje principal
-            tipo: Tipo de notificación (nueva_asesoria, aprobada, rechazada, recordatorio)
-            datos: Datos adicionales para el template
+            asunto: Asunto del correo
+            mensaje: Mensaje principal del correo
+            tipo: Tipo de notificacion (nueva_asesoria, aprobada, rechazada, recordatorio)
+            datos: Datos adicionales para la plantilla
+            
+        Retorna:
+            bool: True si el envio fue exitoso, False en caso contrario
         """
-        print(f"\n📧 Iniciando envío de email...")
-        print(f"   → Destinatario: {destinatario}")
-        print(f"   → Asunto: {asunto}")
-        print(f"   → Tipo: {tipo}")
+        print(f"\nIniciando envio de email...")
+        print(f"   Destinatario: {destinatario}")
+        print(f"   Asunto: {asunto}")
+        print(f"   Tipo: {tipo}")
         
-        # Validar configuración
+        # Validar que el servicio este configurado
         if not self.brevo_enabled:
-            print("❌ ERROR: Brevo API no está configurada")
-            print("   → Configura BREVO_API_KEY en .env o Railway")
+            print("ERROR: Brevo API no esta configurada")
+            print("   Configura BREVO_API_KEY en .env o Railway")
             return False
         
         try:
-            # Generar HTML
-            print(f"📝 Generando HTML del email...")
+            # Generar contenido HTML
+            print(f"Generando HTML del email...")
             html_content = self._generar_html(tipo, mensaje, datos or {})
             
-            # Preparar payload para Brevo
+            # Preparar datos para la API de Brevo
             payload = {
                 "sender": {
                     "name": self.from_name,
@@ -81,15 +90,15 @@ class EmailService:
                 "htmlContent": html_content
             }
             
-            # Headers con API Key
+            # Configurar headers con la API Key
             headers = {
                 "accept": "application/json",
                 "content-type": "application/json",
                 "api-key": self.api_key
             }
             
-            # Enviar via HTTP
-            print(f"📤 Enviando email via Brevo API...")
+            # Realizar peticion HTTP a la API
+            print(f"Enviando email via Brevo API...")
             
             with httpx.Client(timeout=30.0) as client:
                 response = client.post(
@@ -98,41 +107,42 @@ class EmailService:
                     headers=headers
                 )
             
+            # Verificar respuesta
             if response.status_code in [200, 201]:
                 result = response.json()
-                print(f"✅ Email enviado exitosamente a {destinatario}")
-                print(f"   → Message ID: {result.get('messageId', 'N/A')}")
+                print(f"Email enviado exitosamente a {destinatario}")
+                print(f"   Message ID: {result.get('messageId', 'N/A')}")
                 return True
             else:
-                print(f"❌ ERROR al enviar email:")
-                print(f"   → Status Code: {response.status_code}")
-                print(f"   → Response: {response.text}")
-                
-                # Sugerencias según el error
-                if response.status_code == 401:
-                    print("\n💡 SOLUCIÓN: Verifica que BREVO_API_KEY sea correcta")
-                elif response.status_code == 400:
-                    print("\n💡 SOLUCIÓN: Verifica el formato del email")
-                
+                print(f"ERROR al enviar email:")
+                print(f"   Status Code: {response.status_code}")
+                print(f"   Response: {response.text}")
                 return False
                 
         except httpx.TimeoutException:
-            print("❌ ERROR: Timeout al conectar con Brevo API")
+            print("ERROR: Timeout al conectar con Brevo API")
             return False
             
         except Exception as e:
-            print(f"❌ ERROR al enviar email:")
-            print(f"   → Tipo: {type(e).__name__}")
-            print(f"   → Mensaje: {str(e)}")
-            
-            import traceback
-            print(f"   → Traceback:\n{traceback.format_exc()}")
+            print(f"ERROR al enviar email:")
+            print(f"   Tipo: {type(e).__name__}")
+            print(f"   Mensaje: {str(e)}")
             return False
     
     def _generar_html(self, tipo: str, mensaje: str, datos: Dict) -> str:
-        """Generar HTML según tipo de notificación"""
+        """
+        Metodo privado para generar el contenido HTML del correo.
         
-        # Template base profesional
+        Parametros:
+            tipo: Tipo de notificacion
+            mensaje: Mensaje principal
+            datos: Datos adicionales para la plantilla
+            
+        Retorna:
+            str: Contenido HTML del correo
+        """
+        
+        # Plantilla base HTML
         base_template = """
         <!DOCTYPE html>
         <html>
@@ -206,14 +216,14 @@ class EmailService:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🚀 Portafolio Devs</h1>
+                    <h1>Portafolio Devs</h1>
                 </div>
                 <div class="content">
                     {contenido}
                 </div>
                 <div class="footer">
-                    <p>Este es un email automático, por favor no responder.</p>
-                    <p>© 2026 Portafolio Devs. Todos los derechos reservados.</p>
+                    <p>Este es un email automatico, por favor no responder.</p>
+                    <p>2026 Portafolio Devs. Todos los derechos reservados.</p>
                 </div>
             </div>
         </body>
@@ -222,15 +232,15 @@ class EmailService:
         
         frontend_url = settings.frontend_url
         
-        # Contenido según tipo
+        # Generar contenido segun el tipo de notificacion
         if tipo == "nueva_asesoria":
             contenido = f"""
-                <h2>📅 Nueva Solicitud de Asesoría</h2>
+                <h2>Nueva Solicitud de Asesoria</h2>
                 <p>Hola <strong>{datos.get('nombre_programador', 'Programador')}</strong>,</p>
                 <p>{mensaje}</p>
                 
                 <div class="info-box">
-                    <p><strong>📌 Detalles de la solicitud:</strong></p>
+                    <p><strong>Detalles de la solicitud:</strong></p>
                     <ul>
                         <li><strong>Solicitante:</strong> {datos.get('nombre_usuario', 'Usuario')}</li>
                         <li><strong>Fecha:</strong> {datos.get('fecha', 'No especificada')}</li>
@@ -245,33 +255,33 @@ class EmailService:
         
         elif tipo == "asesoria_aprobada":
             contenido = f"""
-                <h2>✅ ¡Asesoría Aprobada!</h2>
+                <h2>Asesoria Aprobada</h2>
                 <p>Hola <strong>{datos.get('nombre_usuario', 'Usuario')}</strong>,</p>
                 <p>{mensaje}</p>
                 
                 <div class="info-box">
-                    <p><strong>📌 Detalles de tu asesoría:</strong></p>
+                    <p><strong>Detalles de tu asesoria:</strong></p>
                     <ul>
                         <li><strong>Programador:</strong> {datos.get('nombre_programador', 'Programador')}</li>
                         <li><strong>Fecha:</strong> {datos.get('fecha', 'No especificada')}</li>
                         <li><strong>Hora:</strong> {datos.get('hora', 'No especificada')}</li>
                     </ul>
-                    <p><strong>💬 Mensaje del programador:</strong></p>
+                    <p><strong>Mensaje del programador:</strong></p>
                     <p><em>{datos.get('mensaje_respuesta', 'Sin mensaje adicional')}</em></p>
                 </div>
                 
-                <p>¡Nos vemos pronto! 🎉</p>
+                <p>Nos vemos pronto!</p>
             """
         
         elif tipo == "asesoria_rechazada":
             contenido = f"""
-                <h2>❌ Solicitud No Aprobada</h2>
+                <h2>Solicitud No Aprobada</h2>
                 <p>Hola <strong>{datos.get('nombre_usuario', 'Usuario')}</strong>,</p>
                 <p>{mensaje}</p>
                 
                 <div class="info-box">
-                    <p><strong>💬 Razón:</strong></p>
-                    <p><em>{datos.get('mensaje_respuesta', 'El programador no está disponible en ese horario')}</em></p>
+                    <p><strong>Razon:</strong></p>
+                    <p><em>{datos.get('mensaje_respuesta', 'El programador no esta disponible en ese horario')}</em></p>
                 </div>
                 
                 <p>Puedes intentar agendar en otro horario.</p>
@@ -280,12 +290,12 @@ class EmailService:
         
         elif tipo == "recordatorio":
             contenido = f"""
-                <h2>⏰ Recordatorio de Asesoría</h2>
+                <h2>Recordatorio de Asesoria</h2>
                 <p>Hola,</p>
-                <p>Te recordamos que tienes una asesoría próxima:</p>
+                <p>Te recordamos que tienes una asesoria proxima:</p>
                 
                 <div class="info-box">
-                    <p><strong>📌 Detalles:</strong></p>
+                    <p><strong>Detalles:</strong></p>
                     <ul>
                         <li><strong>Fecha:</strong> {datos.get('fecha', 'Hoy')}</li>
                         <li><strong>Hora:</strong> {datos.get('hora', 'Pronto')}</li>
@@ -293,17 +303,18 @@ class EmailService:
                     </ul>
                 </div>
                 
-                <p>¡No olvides conectarte a tiempo! 🚀</p>
+                <p>No olvides conectarte a tiempo!</p>
             """
         
-        else:  # generico
+        else:
+            # Plantilla generica
             contenido = f"""
-                <h2>📬 Notificación</h2>
+                <h2>Notificacion</h2>
                 <p>{mensaje}</p>
             """
         
         return base_template.format(contenido=contenido)
 
 
-# Instancia global (singleton)
+# Instancia del servicio (Patron Singleton)
 email_service = EmailService()

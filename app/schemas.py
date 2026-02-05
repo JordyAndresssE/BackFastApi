@@ -1,5 +1,9 @@
 """
-Modelos Pydantic para validación de datos
+Capa de Datos - Modelos Pydantic
+Proyecto: Sistema de Portafolio de Programadores
+Define los esquemas de validacion de datos para la API
+Autor: Estudiante
+Fecha: 2026
 """
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
@@ -7,12 +11,9 @@ from datetime import datetime, date
 from enum import Enum
 
 
-# ==========================================
-# ENUMS
-# ==========================================
-
+# Enumeraciones para estados y tipos
 class EstadoAsesoria(str, Enum):
-    """Estados posibles de una asesoría"""
+    """Estados posibles de una asesoria"""
     PENDIENTE = "pendiente"
     APROBADA = "aprobada"
     RECHAZADA = "rechazada"
@@ -20,25 +21,22 @@ class EstadoAsesoria(str, Enum):
 
 
 class TipoNotificacion(str, Enum):
-    """Tipos de notificaciones"""
+    """Tipos de notificaciones disponibles"""
     EMAIL = "email"
     WHATSAPP = "whatsapp"
     AMBOS = "ambos"
 
 
 class FormatoReporte(str, Enum):
-    """Formatos de reporte"""
+    """Formatos de exportacion de reportes"""
     PDF = "pdf"
     EXCEL = "excel"
     JSON = "json"
 
 
-# ==========================================
-# NOTIFICACIONES
-# ==========================================
-
+# Esquemas para notificaciones
 class EmailRequest(BaseModel):
-    """Request para enviar email"""
+    """Esquema para solicitud de envio de email"""
     destinatario: EmailStr
     asunto: str
     mensaje: str
@@ -49,11 +47,11 @@ class EmailRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "destinatario": "programador@example.com",
-                "asunto": "Nueva solicitud de asesoría",
-                "mensaje": "Tienes una nueva solicitud de asesoría",
+                "asunto": "Nueva solicitud de asesoria",
+                "mensaje": "Tienes una nueva solicitud de asesoria",
                 "tipo_notificacion": "nueva_asesoria",
                 "datos_adicionales": {
-                    "nombre_usuario": "Juan Pérez",
+                    "nombre_usuario": "Juan Perez",
                     "fecha": "2026-02-15",
                     "hora": "10:00"
                 }
@@ -62,21 +60,21 @@ class EmailRequest(BaseModel):
 
 
 class WhatsAppRequest(BaseModel):
-    """Request para enviar WhatsApp"""
-    numero: str = Field(..., description="Número en formato +593999999999")
+    """Esquema para solicitud de envio de WhatsApp"""
+    numero: str = Field(..., description="Numero en formato +593999999999")
     mensaje: str
     
     class Config:
         json_schema_extra = {
             "example": {
                 "numero": "+593999999999",
-                "mensaje": "Hola! Tienes una nueva asesoría agendada."
+                "mensaje": "Hola! Tienes una nueva asesoria agendada."
             }
         }
 
 
 class NotificacionAsesoria(BaseModel):
-    """Notificación completa de asesoría"""
+    """Esquema para notificacion completa de asesoria"""
     id_asesoria: str
     email_programador: EmailStr
     nombre_programador: str
@@ -93,7 +91,7 @@ class NotificacionAsesoria(BaseModel):
 
 
 class RecordatorioRequest(BaseModel):
-    """Request para programar recordatorio"""
+    """Esquema para programar recordatorio"""
     id_asesoria: str
     fecha_hora_asesoria: datetime
     email_programador: EmailStr
@@ -112,12 +110,9 @@ class RecordatorioRequest(BaseModel):
         }
 
 
-# ==========================================
-# REPORTES
-# ==========================================
-
+# Esquemas para reportes
 class FiltrosReporteAsesorias(BaseModel):
-    """Filtros para reporte de asesorías"""
+    """Esquema de filtros para reporte de asesorias"""
     fecha_inicio: Optional[date] = None
     fecha_fin: Optional[date] = None
     id_programador: Optional[str] = None
@@ -126,14 +121,14 @@ class FiltrosReporteAsesorias(BaseModel):
 
 
 class FiltrosReporteProyectos(BaseModel):
-    """Filtros para reporte de proyectos"""
+    """Esquema de filtros para reporte de proyectos"""
     id_programador: Optional[str] = None
     tipo: Optional[str] = None
     formato: FormatoReporte = FormatoReporte.JSON
 
 
 class EstadisticaAsesoria(BaseModel):
-    """Estadística de asesorías"""
+    """Esquema para estadisticas de asesorias"""
     total: int
     pendientes: int
     aprobadas: int
@@ -142,7 +137,7 @@ class EstadisticaAsesoria(BaseModel):
 
 
 class EstadisticaProyecto(BaseModel):
-    """Estadística de proyectos"""
+    """Esquema para estadisticas de proyectos"""
     total: int
     academicos: int
     laborales: int
@@ -150,7 +145,7 @@ class EstadisticaProyecto(BaseModel):
 
 
 class DashboardAsesorias(BaseModel):
-    """Dashboard de asesorías"""
+    """Esquema para dashboard de asesorias"""
     estadisticas: EstadisticaAsesoria
     asesorias_recientes: List[dict]
     por_programador: List[dict]
@@ -158,24 +153,21 @@ class DashboardAsesorias(BaseModel):
 
 
 class DashboardProyectos(BaseModel):
-    """Dashboard de proyectos"""
+    """Esquema para dashboard de proyectos"""
     estadisticas: EstadisticaProyecto
     proyectos_recientes: List[dict]
     por_programador: List[dict]
     tecnologias_populares: List[dict]
 
 
-# ==========================================
-# RESPUESTAS GENÉRICAS
-# ==========================================
-
+# Esquemas de respuesta
 class RespuestaExito(BaseModel):
-    """Respuesta exitosa genérica"""
+    """Esquema para respuesta exitosa"""
     mensaje: str
     datos: Optional[dict] = None
 
 
 class RespuestaError(BaseModel):
-    """Respuesta de error"""
+    """Esquema para respuesta de error"""
     error: str
     detalle: Optional[str] = None
