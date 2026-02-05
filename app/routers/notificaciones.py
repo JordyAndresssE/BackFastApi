@@ -118,33 +118,34 @@ async def notificar_asesoria(notificacion: NotificacionAsesoria, background_task
             )
         
         elif notificacion.estado.value == "aprobada":
-            print("📨 ENVIANDO → Email al USUARIO (aprobada)")
-            print("📱 ENVIANDO → WhatsApp al PROGRAMADOR (recordatorio)")
             tipo_email = "asesoria_aprobada"
             
-            # Email al usuario (SÍNCRONO)
-            email_service.enviar_email(
-                destinatario=notificacion.email_usuario,
-                asunto="✅ Tu asesoría ha sido aprobada",
-                mensaje=f"Tu asesoría con {notificacion.nombre_programador} fue aprobada",
-                tipo=tipo_email,
-                datos=datos
-            )
+            # Verificar tipo de notificación
+            print(f"\n📋 Tipo de notificación: {notificacion.tipo_notificacion.value}")
+            print(f"📱 Teléfono programador: {notificacion.telefono_programador or 'NO PROPORCIONADO'}")
             
-            # WhatsApp al PROGRAMADOR (recordatorio)
-            print(f"\n🔍 Verificando teléfono del programador...")
-            print(f"   → Teléfono recibido: {notificacion.telefono_programador or 'NO ENVIADO'}")
-            
-            if notificacion.telefono_programador:
-                print(f"✅ Teléfono válido, enviando WhatsApp...")
-                mensaje_wa = f"✅ Asesoría aprobada!\n📅 {notificacion.fecha_asesoria} a las {notificacion.hora_asesoria}\n👤 Con: {notificacion.nombre_usuario}"
-                whatsapp_service.enviar_mensaje(
-                    numero=notificacion.telefono_programador,
-                    mensaje=mensaje_wa
+            # Email al usuario (si tipo es 'email' o 'ambos')
+            if notificacion.tipo_notificacion.value in ["email", "ambos"]:
+                print("📨 ENVIANDO → Email al USUARIO (aprobada)")
+                email_service.enviar_email(
+                    destinatario=notificacion.email_usuario,
+                    asunto="✅ Tu asesoría ha sido aprobada",
+                    mensaje=f"Tu asesoría con {notificacion.nombre_programador} fue aprobada",
+                    tipo=tipo_email,
+                    datos=datos
                 )
-            else:
-                print(f"⚠️ WhatsApp NO enviado: telefono_programador no fue incluido en el request")
-                print(f"💡 El frontend debe enviar: 'telefono_programador': '+593999999999'")
+            
+            # WhatsApp al PROGRAMADOR (si tipo es 'whatsapp' o 'ambos')
+            if notificacion.tipo_notificacion.value in ["whatsapp", "ambos"]:
+                if notificacion.telefono_programador:
+                    print("📱 ENVIANDO → WhatsApp al PROGRAMADOR (recordatorio)")
+                    mensaje_wa = f"✅ Asesoría aprobada!\n📅 {notificacion.fecha_asesoria} a las {notificacion.hora_asesoria}\n👤 Con: {notificacion.nombre_usuario}"
+                    whatsapp_service.enviar_mensaje(
+                        numero=notificacion.telefono_programador,
+                        mensaje=mensaje_wa
+                    )
+                else:
+                    print(f"⚠️ WhatsApp solicitado pero telefono_programador no proporcionado")
         
         elif notificacion.estado.value == "rechazada":
             print("📨 ENVIANDO → Email al USUARIO (rechazada)")
