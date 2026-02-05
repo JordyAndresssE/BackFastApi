@@ -22,9 +22,9 @@ pymysql==1.1.1
 # mysqlclient==2.2.6  # Opcional, más rápido pero requiere compilación
 
 # ===================================
-# NOTIFICACIONES - EMAIL
+# NOTIFICACIONES - EMAIL (EmailJS)
 # ===================================
-resend==2.21.0
+# EmailJS usa httpx para llamadas HTTP (ya incluido arriba)
 jinja2==3.1.4
 email-validator==2.2.0
 

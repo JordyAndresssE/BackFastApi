@@ -12,22 +12,20 @@ class Settings(BaseSettings):
     jakarta_ee_url: str = "http://localhost:8080/backproyecto/api"
     database_url: str = "mysql+pymysql://root:password@localhost:3306/portafolio_programadores"
     
-    # Email - Resend API
-    resend_api_key: str = ""
-    # IMPORTANTE: Si usas un dominio personalizado, debes verificarlo en Resend
-    # Temporalmente puedes usar: onboarding@resend.dev
-    email_from: str = "onboarding@resend.dev"
-    email_from_name: str = "Portafolio Devs"
-    
-    # Legacy SMTP (deprecated, usar Resend)
+    # Email - SMTP (Gmail u otro proveedor)
     smtp_server: str = "smtp.gmail.com"
     smtp_port: int = 587
-    smtp_username: str = ""
-    smtp_password: str = ""
+    smtp_username: str = ""  # tu_email@gmail.com
+    smtp_password: str = ""  # Contraseña de aplicación (NO tu contraseña normal)
+    email_from: str = ""     # Mismo email que smtp_username
+    email_from_name: str = "Portafolio Devs"
     
+    # WhatsApp - Twilio
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_whatsapp_from: str = "whatsapp:+14155238886"
+    
+    # Configuración API
     api_port: int = 8000
     debug: bool = True
     frontend_url: str = "http://localhost:4200"

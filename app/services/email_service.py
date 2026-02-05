@@ -1,45 +1,49 @@
 """
 Servicio de Email
-Envío de correos con templates HTML usando Resend
+Envío de correos con templates HTML usando SMTP (Gmail)
+100% GRATIS - Sin límites
 """
-import resend
-from jinja2 import Template
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from ..config import settings
 from typing import Optional, Dict
 
 
 class EmailService:
-    """Servicio para enviar emails usando Resend API"""
+    """Servicio para enviar emails usando SMTP (Gmail)"""
     
     def __init__(self):
+        # Configuración SMTP
+        self.smtp_server = settings.smtp_server
+        self.smtp_port = settings.smtp_port
+        self.smtp_username = settings.smtp_username
+        self.smtp_password = settings.smtp_password
         self.from_email = settings.email_from
         self.from_name = settings.email_from_name
         
-        # Configurar Resend API
-        if settings.resend_api_key:
-            resend.api_key = settings.resend_api_key
-            self.resend_enabled = True
-        else:
-            self.resend_enabled = False
+        # Verificar configuración
+        self.smtp_enabled = bool(
+            self.smtp_server and 
+            self.smtp_username and 
+            self.smtp_password
+        )
         
-        # IMPORTANTE: Resend requiere que el dominio esté verificado
-        # Si usas un email personalizado (asesorias@pixelgosoft.com), 
-        # debes verificar el dominio en Resend Dashboard
-        # Mientras tanto, puedes usar: onboarding@resend.dev
-        
-        # Log de configuración al inicializar
+        # Log de configuración
         print("\n" + "="*60)
-        print("📧 Email Service configurado (Resend):")
+        print("📧 Email Service configurado (SMTP Gmail):")
+        print(f"   Server: {self.smtp_server}:{self.smtp_port}")
+        print(f"   Username: {self.smtp_username}")
         print(f"   From: {self.from_email}")
-        print(f"   From Name: {self.from_name}")
-        print(f"   Resend API configurada: {'✅' if self.resend_enabled else '❌'}")
+        print(f"   SMTP habilitado: {'✅' if self.smtp_enabled else '❌'}")
         
-        if self.resend_enabled and '@' in self.from_email:
-            domain = self.from_email.split('@')[1]
-            if domain not in ['resend.dev', 'gmail.com', 'outlook.com']:
-                print(f"   ⚠️  Dominio personalizado detectado: {domain}")
-                print(f"   ⚠️  Asegúrate de verificarlo en Resend Dashboard")
-                print(f"   💡 O usa temporalmente: onboarding@resend.dev")
+        if not self.smtp_enabled:
+            print("\n   ⚠️ SMTP no configurado correctamente.")
+            print("   → Configura estas variables en .env:")
+            print("      SMTP_SERVER=smtp.gmail.com")
+            print("      SMTP_PORT=587")
+            print("      SMTP_USERNAME=tu_email@gmail.com")
+            print("      SMTP_PASSWORD=tu_contraseña_de_aplicacion")
         
         print("="*60 + "\n")
     
@@ -52,7 +56,7 @@ class EmailService:
         datos: Optional[Dict] = None
     ) -> bool:
         """
-        Enviar email con template HTML usando Resend
+        Enviar email con template HTML usando SMTP
         
         Args:
             destinatario: Email del destinatario
@@ -67,114 +71,137 @@ class EmailService:
         print(f"   → Tipo: {tipo}")
         
         # Validar configuración
-        if not self.resend_enabled:
-            print("❌ ERROR: RESEND_API_KEY no configurada")
-            print("   → Agrega esta variable en Railway:")
-            print(f"      RESEND_API_KEY=re_xxxxxxxxxx")
+        if not self.smtp_enabled:
+            print("❌ ERROR: SMTP no está configurado")
+            print("   → Configura SMTP_USERNAME y SMTP_PASSWORD en .env")
             return False
         
         try:
+            # Generar HTML
             print(f"📝 Generando HTML del email...")
-            # Generar HTML según tipo
             html_content = self._generar_html(tipo, mensaje, datos or {})
-            print(f"✅ HTML generado correctamente")
             
-            # Enviar email con Resend
-            print(f"📤 Enviando email via Resend API...")
-            params = {
-                "from": f"{self.from_name} <{self.from_email}>",
-                "to": [destinatario],
-                "subject": asunto,
-                "html": html_content,
-            }
+            # Crear mensaje
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = asunto
+            msg["From"] = f"{self.from_name} <{self.from_email}>"
+            msg["To"] = destinatario
             
-            response = resend.Emails.send(params)
+            # Agregar contenido HTML
+            html_part = MIMEText(html_content, "html", "utf-8")
+            msg.attach(html_part)
+            
+            # Enviar via SMTP
+            print(f"📤 Conectando a {self.smtp_server}:{self.smtp_port}...")
+            
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()  # Seguridad TLS
+                print(f"🔐 Autenticando...")
+                server.login(self.smtp_username, self.smtp_password)
+                print(f"📨 Enviando email...")
+                server.sendmail(self.from_email, destinatario, msg.as_string())
             
             print(f"✅ Email enviado exitosamente a {destinatario}")
-            print(f"   → Resend ID: {response.get('id', 'N/A')}")
             return True
             
+        except smtplib.SMTPAuthenticationError as e:
+            print(f"❌ ERROR de autenticación SMTP:")
+            print(f"   → {str(e)}")
+            print("\n💡 SOLUCIÓN:")
+            print("   1. Activa 'Verificación en 2 pasos' en tu cuenta Google")
+            print("   2. Genera una 'Contraseña de aplicación':")
+            print("      → https://myaccount.google.com/apppasswords")
+            print("   3. Usa esa contraseña en SMTP_PASSWORD")
+            return False
+            
+        except smtplib.SMTPException as e:
+            print(f"❌ ERROR SMTP: {str(e)}")
+            return False
+            
         except Exception as e:
-            print(f"❌ ERROR al enviar email con Resend:")
+            print(f"❌ ERROR al enviar email:")
             print(f"   → Tipo: {type(e).__name__}")
             print(f"   → Mensaje: {str(e)}")
             
-            # Mostrar detalles adicionales si es ResendError
-            if hasattr(e, 'message'):
-                print(f"   → Error Message: {e.message}")
-            if hasattr(e, 'status_code'):
-                print(f"   → Status Code: {e.status_code}")
-            
             import traceback
             print(f"   → Traceback:\n{traceback.format_exc()}")
-            
-            # Sugerencias según el error
-            if "Invalid API key" in str(e) or "Unauthorized" in str(e):
-                print("\n💡 SOLUCIÓN:")
-                print("   → Verifica que RESEND_API_KEY esté correcta en Railway")
-            elif "not verified" in str(e) or "domain" in str(e).lower():
-                print("\n💡 SOLUCIÓN:")
-                print("   → El email 'from' debe estar verificado en Resend")
-                print("   → Usa 'onboarding@resend.dev' temporalmente")
-                print("   → O verifica tu dominio en Resend Dashboard")
-            
             return False
     
     def _generar_html(self, tipo: str, mensaje: str, datos: Dict) -> str:
         """Generar HTML según tipo de notificación"""
         
-        # Template base
+        # Template base profesional
         base_template = """
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-                body {
-                    font-family: Arial, sans-serif;
+                body {{
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                     background-color: #f4f4f4;
                     margin: 0;
                     padding: 0;
-                }
-                .container {
+                }}
+                .container {{
                     max-width: 600px;
                     margin: 20px auto;
                     background-color: #ffffff;
-                    border-radius: 8px;
+                    border-radius: 12px;
                     overflow: hidden;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }
-                .header {
-                    background-color: #A10000;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #A10000 0%, #7B0000 100%);
                     color: white;
                     padding: 30px;
                     text-align: center;
-                }
-                .content {
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 24px;
+                }}
+                .content {{
                     padding: 30px;
                     color: #333333;
-                }
-                .info-box {
+                    line-height: 1.6;
+                }}
+                .info-box {{
                     background-color: #f8f9fa;
                     border-left: 4px solid #A10000;
-                    padding: 15px;
+                    padding: 20px;
                     margin: 20px 0;
-                }
-                .button {
+                    border-radius: 0 8px 8px 0;
+                }}
+                .info-box ul {{
+                    margin: 10px 0;
+                    padding-left: 20px;
+                }}
+                .info-box li {{
+                    margin: 8px 0;
+                }}
+                .button {{
                     display: inline-block;
-                    padding: 12px 30px;
-                    background-color: #A10000;
-                    color: white;
+                    padding: 14px 35px;
+                    background: linear-gradient(135deg, #A10000 0%, #7B0000 100%);
+                    color: white !important;
                     text-decoration: none;
-                    border-radius: 5px;
+                    border-radius: 8px;
                     margin: 20px 0;
-                }
-                .footer {
+                    font-weight: bold;
+                }}
+                .footer {{
                     background-color: #f8f9fa;
                     padding: 20px;
                     text-align: center;
                     color: #666666;
                     font-size: 12px;
-                }
+                    border-top: 1px solid #eee;
+                }}
+                .emoji {{
+                    font-size: 20px;
+                }}
             </style>
         </head>
         <body>
@@ -183,16 +210,18 @@ class EmailService:
                     <h1>🚀 Portafolio Devs</h1>
                 </div>
                 <div class="content">
-                    {{ contenido }}
+                    {contenido}
                 </div>
                 <div class="footer">
                     <p>Este es un email automático, por favor no responder.</p>
-                    <p>&copy; 2026 Portafolio Devs. Todos los derechos reservados.</p>
+                    <p>© 2026 Portafolio Devs. Todos los derechos reservados.</p>
                 </div>
             </div>
         </body>
         </html>
         """
+        
+        frontend_url = settings.frontend_url
         
         # Contenido según tipo
         if tipo == "nueva_asesoria":
@@ -202,7 +231,7 @@ class EmailService:
                 <p>{mensaje}</p>
                 
                 <div class="info-box">
-                    <p><strong>📌 Detalles:</strong></p>
+                    <p><strong>📌 Detalles de la solicitud:</strong></p>
                     <ul>
                         <li><strong>Solicitante:</strong> {datos.get('nombre_usuario', 'Usuario')}</li>
                         <li><strong>Fecha:</strong> {datos.get('fecha', 'No especificada')}</li>
@@ -212,23 +241,23 @@ class EmailService:
                 </div>
                 
                 <p>Ingresa a tu panel para aprobar o rechazar esta solicitud.</p>
-                <a href="{settings.frontend_url}/programador" class="button">Ver Panel</a>
+                <a href="{frontend_url}/programador" class="button">Ver Panel</a>
             """
         
         elif tipo == "asesoria_aprobada":
             contenido = f"""
-                <h2>✅ Asesoría Aprobada</h2>
+                <h2>✅ ¡Asesoría Aprobada!</h2>
                 <p>Hola <strong>{datos.get('nombre_usuario', 'Usuario')}</strong>,</p>
                 <p>{mensaje}</p>
                 
                 <div class="info-box">
-                    <p><strong>📌 Detalles:</strong></p>
+                    <p><strong>📌 Detalles de tu asesoría:</strong></p>
                     <ul>
                         <li><strong>Programador:</strong> {datos.get('nombre_programador', 'Programador')}</li>
                         <li><strong>Fecha:</strong> {datos.get('fecha', 'No especificada')}</li>
                         <li><strong>Hora:</strong> {datos.get('hora', 'No especificada')}</li>
                     </ul>
-                    <p><strong>Mensaje del programador:</strong></p>
+                    <p><strong>💬 Mensaje del programador:</strong></p>
                     <p><em>{datos.get('mensaje_respuesta', 'Sin mensaje adicional')}</em></p>
                 </div>
                 
@@ -242,12 +271,12 @@ class EmailService:
                 <p>{mensaje}</p>
                 
                 <div class="info-box">
-                    <p><strong>Razón:</strong></p>
+                    <p><strong>💬 Razón:</strong></p>
                     <p><em>{datos.get('mensaje_respuesta', 'El programador no está disponible en ese horario')}</em></p>
                 </div>
                 
                 <p>Puedes intentar agendar en otro horario.</p>
-                <a href="{settings.frontend_url}" class="button">Ver Programadores</a>
+                <a href="{frontend_url}" class="button">Ver Programadores</a>
             """
         
         elif tipo == "recordatorio":
@@ -274,6 +303,8 @@ class EmailService:
                 <p>{mensaje}</p>
             """
         
-        # Renderizar template
-        template = Template(base_template)
-        return template.render(contenido=contenido)
+        return base_template.format(contenido=contenido)
+
+
+# Instancia global (singleton)
+email_service = EmailService()
